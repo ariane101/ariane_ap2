@@ -12,7 +12,7 @@ r.json().keys()
 dados = r.json()['dados'][0]
 balanco = dados['balanco']
 df = pd.DataFrame(balanco)
-df2 = df.to_excel("C:\\Users\\marco\\OneDrive\\Área de Trabalho\\python facul\\ambev.xlsx")
+df2 = df.to_excel("C:\\Users\\202403765021\\Documents\\análisedados\\ambev.xlsx")
 
 #Ativo Circulante
 filtro = df["descricao"].str.contains("ativo circulante", case = False)
@@ -122,8 +122,8 @@ r2.json().keys()
 dados2 = r2.json()['dados'][0]
 balanco2 = dados2['balanco']
 df3 = pd.DataFrame(balanco2)
-df3.to_excel("C:\\Users\\marco\\OneDrive\\Área de Trabalho\\python facul\\ambev23.xlsx")
-df4 = pd.read_excel("C:\\Users\\marco\\OneDrive\\Área de Trabalho\\python facul\\ambev23.xlsx")
+df3.to_excel("C:\\Users\\202403765021\\Documents\\análisedados\\ambev23.xlsx")
+df4 = pd.read_excel("C:\\Users\\202403765021\\Documents\\análisedados\\ambev23.xlsx")
 
 #Estoque médio
 estoque_24 = valor_contabil(df, "^1.0*", "estoque")
@@ -195,3 +195,7 @@ ncg = aco - pco
 
 #ST
 st = acf - pcf
+
+# EXCEL DE CONTABILIDADE
+
+excelcont = "C:\\Users\\202403765021\\Documents\\análisedados\\ambev trabalho excel.xlsx"

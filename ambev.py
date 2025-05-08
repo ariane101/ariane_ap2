@@ -1,201 +1,334 @@
 import requests
 import pandas as pd
-token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ2ODc3NTMyLCJpYXQiOjE3NDQyODU1MzIsImp0aSI6IjQ4MjdkYzRiN2YyNzQ2ZjU4YWYzZDY0MzBjYjIzMjM2IiwidXNlcl9pZCI6NTh9.RMxgWlV4QftrzCrM-8gXrfYgQwRlgFQ6IxLedgVpwAg"
-headers = {'Authorization': 'JWT {}'.format(token)}
-params = {
-    'ticker': 'ABEV3',
-    'ano_tri': '20244T'
-}
-r = requests.get('https://laboratoriodefinancas.com/api/v1/balanco/',params=params, headers=headers)
-r.json()
-r.json().keys()
-dados = r.json()['dados'][0]
-balanco = dados['balanco']
-df = pd.DataFrame(balanco)
-df2 = df.to_excel("C:\\Users\\202403765021\\Documents\\análisedados\\ambev.xlsx")
+
+def dataframe(ticker, trimestre):
+    token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ2ODc3NTMyLCJpYXQiOjE3NDQyODU1MzIsImp0aSI6IjQ4MjdkYzRiN2YyNzQ2ZjU4YWYzZDY0MzBjYjIzMjM2IiwidXNlcl9pZCI6NTh9.RMxgWlV4QftrzCrM-8gXrfYgQwRlgFQ6IxLedgVpwAg"
+    headers = {'Authorization': 'JWT {}'.format(token)}
+    empresa = f"{ticker}"
+    data = f"{trimestre}"
+    
+    params = {
+    'ticker': ticker,
+    'ano_tri': trimestre
+    }
+    r = requests.get('https://laboratoriodefinancas.com/api/v1/balanco/',params=params, headers=headers)
+    r.json()
+    r.json().keys()
+    dados = r.json()['dados'][0]
+    balanco = dados['balanco']
+    df = pd.DataFrame(balanco)
+    return df
+
+ticker = 'ABEV3'
+trimestre = '20244T'
+df = dataframe(ticker, trimestre)
 
 #Ativo Circulante
-filtro = df["descricao"].str.contains("ativo circulante", case = False)
-ativo_circulante = df[filtro]["valor"].values[0]
-
-#Passivo Cirulante
-filtro1 = df["descricao"].str.contains("passivo circulante", case = False)
-passivo_circulante = df[filtro1]["valor"].values[0]
-
-#Ativo Total
-ativo_total = df[df['descricao'].str.contains('Ativo Total', case=False)]["valor"].values[0]
-
-#Passivo Total
-passivo_total = df[df["descricao"].str.contains("passivo tota", case = False)]["valor"].values[0]
-
-#Liquidez Corrente
-liquidez_corrente = ativo_circulante / passivo_circulante
-
-#Estoque
-filtro2 = df['descricao'].str.contains('Estoque', case=False)
-df[filtro2][['conta','descricao','valor']]
-estoque = df[filtro2]['valor'].values[0]
-
-#Caixa
-filtro3 = df['descricao'].str.contains('Caixa', case=False)
-df[filtro3][['conta','descricao','valor']]
-caixa = df[filtro3]['valor'].values[0]
-
-#Liquidez Seca
-liquidez_seca = (ativo_circulante - estoque) / passivo_circulante
-
-#Liquidez Imediata
-liquidez_imediata = caixa / passivo_circulante
-
-#Capital de Giro
-capital_giro = ativo_circulante - passivo_circulante
-
-#Liquidez Geral
-filtro4 = df['descricao'].str.contains('longo', case=False)
-df[filtro4][['conta','descricao','valor']]
-realizavel_longoprazo = df[filtro4]['valor'].values[0]
-liquidez_geral = (ativo_circulante + realizavel_longoprazo) / (passivo_circulante)
-
-#Passivo Não Circulante
-filtro5 = df['descricao'].str.contains('passivo não circulante', case=False)
-df[filtro5][['conta', 'descricao', 'valor']]
-passivo_naocirculante = df[filtro5]['valor'].values[0]
-
-#Passivo (PC + PNC)
-passivo = passivo_circulante + passivo_naocirculante
-
-#Passivo Total e PL
-passivo_total = df[df['descricao'].str.contains('Passivo Total', case=False)]["valor"].values[0]
-pl = df[df['descricao'].str.contains('Patrimônio Líquido Consolidado', case=False)]["valor"].values[0]
-
-#Endividamento Geral
-endividamento_geral = passivo / (passivo + pl)
-
-#Estrutura de Capital
-estrutura_capital = passivo / pl
-
-#Solvencia
-solvencia = ativo_total / passivo
-
-#CE (composição de endividamento)
-composição_endividamento = passivo_circulante / passivo
-
-#5 i's ()
 def valor_contabil(df, conta, descricao):
     filtro_conta = df[ 'conta'].str. contains (conta, case=False)
     filtro_descricao = df[ 'descricao']. str. contains (descricao, case=False)
     valor = sum(df[filtro_conta & filtro_descricao] ['valor'].values)
     return valor
 
-#'conta='^1.*'
-#descricao = 'imobi.*'
-#filtro_conta = df['conta'].str.contains(conta, case=False)
-#filtro_descricao = df['descricao'].str.contains(descricao, case=False)
-#df[filtro_conta & filtro_descricao]'
 
-intagivel = valor_contabil(df, '^1.','^Intang.')
-imobilizado = valor_contabil(df, '^1.*','^Imobilizado$')
-investimentos = valor_contabil(df, '^1.*', '^Investimento.$')
-pl2 = valor_contabil(df, '^2.','patrim.nio')
+def valor_contabil_2(df, conta, descricao):
+    filtro_conta = df[ 'conta'].str. contains (conta, case=False)
+    filtro_descricao = df[ 'descricao']. str. contains (descricao, case=False)
+    valor = sum(df[filtro_conta & filtro_descricao] ['valor'].values)
+    return valor
 
-#relação CT - CP passivo / PL
-relação_CT_CP = passivo / pl2
+def indices_basicos(df):
+    Ativo_C = valor_contabil(df, '^1.0', '^ativo cir')
+    Estoque = valor_contabil(df, '^1.0', '^estoque')
+    Despesa_Antecipada = valor_contabil(df, '^1.0', '^despesa')
+    Caixa = valor_contabil(df, '^1.0', '^caixa')
+    Aplicacao_F = valor_contabil(df, '^1.0', '^aplica')
+    Disponivel = Caixa + Aplicacao_F
+    Ativo_RNC = valor_contabil(df, '^1.0*', '^ativo realiz')
+    Ativo_NR = valor_contabil(df,'^1.*','^invest') + valor_contabil(df,'^1.*','^imobilizado$') + valor_contabil(df,'^1.*','^intang*')
+    Passivo_C = valor_contabil(df, '^2.0', '^passivo cir')
+    Passivo_NC = valor_contabil(df, '^2.0*', '^passivo n.o cir')
+    Patrimonio_L = valor_contabil(df,'^2.*','patrim.nio')
+    POn = (valor_contabil(df, '^2.01', '^empr.stimo'))+(valor_contabil(df, '^2.02', '^empr.stimo'))+(valor_contabil(df, '^2.01', '^deb.ntures'))+(valor_contabil(df, '^2.02', '^deb.ntures'))
+    Imposto_de_renda_AC = valor_contabil(df, '^1.0', '^imposto de renda')
+    Emprestimos = valor_contabil(df, '^2.0', '^empr.stimo')
+    Provisoes = valor_contabil(df, '^2.0', '^provis.es')
+    Imposto_de_renda_PC = valor_contabil(df, '^2.0', '^imposto de renda')
+    Dividendos = valor_contabil_2(df, '^2.0', '^dividendos')
+    Ativo_T = valor_contabil(df,'^1.*','ativo total')
+    Investimento = POn + Patrimonio_L
+    IR_Corrente = (valor_contabil(df, '^3.0', '^imposto de renda'))*(-1)
+    Lair = valor_contabil_2(df, '^3.0', 'antes')
+    Despesa_Financeira =  (valor_contabil(df,'^3.*','^despesas financeiras'))*(-1)
+    investimentos = valor_contabil(df,'^1.*','^invest')
+    imobilizado = valor_contabil(df,'^1.*','^imobilizado$')
+    intangivel = valor_contabil(df,'^1.*','^intang*')
+    Custo_MV = valor_contabil(df,'^3.*','custo')
+    Clientes = valor_contabil(df,'^1.*','clientes')
+    Receita_liquida = valor_contabil(df,'^3.*','receita')
+    Fornecedor = valor_contabil(df,'^2.*','fornecedor')
+    
+    return {
+        'Ativo_C'            : Ativo_C,
+        'Estoque'            : Estoque,
+        'Despesa_Antecipada' : Despesa_Antecipada,
+        'Caixa'              : Caixa,
+        'Aplicacao_F'        : Aplicacao_F,
+        'Disponivel'         : Disponivel,
+        'Ativo_RNC'          : Ativo_RNC,
+        'Ativo_NR'           : Ativo_NR,
+        'Passivo_C'          : Passivo_C,
+        'Passivo_NC'         : Passivo_NC,
+        'Patrimonio_L'       : Patrimonio_L,
+        'POn'                : POn,
+        'Imposto_de_renda_AC': Imposto_de_renda_AC,
+        'Emprestimos'        : Emprestimos,
+        'Provisoes'          : Provisoes,
+        'Imposto_de_renda_PC': Imposto_de_renda_PC,
+        'Dividendos'         : Dividendos,
+        'Ativo_T'            : Ativo_T,
+        'Investimento'       : Investimento,
+        'IR_Corrente'        : IR_Corrente,
+        'Lair'               : Lair,
+        'Despesa_Financeira' : Despesa_Financeira,
+        'investimentos'      : investimentos,
+        'imobilizado'        : imobilizado,
+        'intangivel'         : intangivel,
+        'Custo_MV'           : Custo_MV,
+        'Clientes'           : Clientes,
+        'Receita_liquida'    : Receita_liquida,
+        'Fornecedor'         : Fornecedor
+    }
 
-#5i's
-i = intagivel + imobilizado + investimentos
+def indices_liquidez(indices_basicos):
+    Ativo_C = indices_basicos["Ativo_C"]
+    Passivo_C = indices_basicos["Passivo_C"]
+    Estoque = indices_basicos["Estoque"]
+    Despesa_Antecipada = indices_basicos["Despesa_Antecipada"]
+    Disponivel = indices_basicos["Disponivel"]
+    Ativo_RNC = indices_basicos["Ativo_RNC"]
+    Passivo_NC = indices_basicos["Passivo_NC"]
+    
 
-#IPL
-ipl = (intagivel + imobilizado + investimentos) / pl2
-
-
-import requests
-import pandas as pd
-token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ2ODc3NTMyLCJpYXQiOjE3NDQyODU1MzIsImp0aSI6IjQ4MjdkYzRiN2YyNzQ2ZjU4YWYzZDY0MzBjYjIzMjM2IiwidXNlcl9pZCI6NTh9.RMxgWlV4QftrzCrM-8gXrfYgQwRlgFQ6IxLedgVpwAg"
-headers = {'Authorization': 'JWT {}'.format(token)}
-params = {
-    'ticker': 'ABEV3',
-    'ano_tri': '20234T'
-}
-r2 = requests.get('https://laboratoriodefinancas.com/api/v1/balanco/',params=params, headers=headers)
-r2.json()
-r2.json().keys()
-dados2 = r2.json()['dados'][0]
-balanco2 = dados2['balanco']
-df3 = pd.DataFrame(balanco2)
-df3.to_excel("C:\\Users\\202403765021\\Documents\\análisedados\\ambev23.xlsx")
-df4 = pd.read_excel("C:\\Users\\202403765021\\Documents\\análisedados\\ambev23.xlsx")
-
-#Estoque médio
-estoque_24 = valor_contabil(df, "^1.0*", "estoque")
-estoque_23 = valor_contabil(df4, "^1.0*", "estoque")
-estoque_medio = (estoque_24 + estoque_23) / 2
-
-#fornecedores médio
-fornecedores_24 = valor_contabil(df, "^2.0*", "^Fornecedores$")
-fornecedores_23 = valor_contabil(df4, "^2.0*", "^Fornecedores$")
-fornecedores_medio = (fornecedores_24 + fornecedores_23) / 2
-
-#clientes médio
-clientes_24 = valor_contabil(df, "^1.0*", "^Clientes$")
-contas_receber_24 = valor_contabil(df, "^1.0*", "^Contas a Receber$")
-
-clientes_23 = valor_contabil(df4, "^1.0*", "^Clientes$")
-contas_receber_23 = valor_contabil(df4, "^1.0*", "^Contas a Receber$")
-
-clientes_medio = (clientes_24 + clientes_23) / 2
+    L_Corrente = Ativo_C / Passivo_C
+    L_Seca = (Ativo_C - Estoque - Despesa_Antecipada) / Passivo_C
+    L_Imediata = Disponivel / Passivo_C
+    L_Geral = (Ativo_C + Ativo_RNC) / (Passivo_C + Passivo_NC)
 
 
-receita_24 = valor_contabil(df, "^7.0*", "^Receitas$")
-cmv_24 = valor_contabil(df, "^3.0*", "^Custo dos Produtos$")*(-1)
-compras = estoque_24 - estoque_23 + cmv_24 
+    return {
+        'L_Corrente': L_Corrente,
+        'L_Seca'    : L_Seca,
+        'L_Imediata': L_Imediata,
+        'L_Geral'   : L_Geral,
+    }
 
-#PME
-pme = (estoque_medio / cmv_24)*360
+def indices_giro_tesouraria(indices_basicos):
+    Ativo_C = indices_basicos["Ativo_C"]
+    Passivo_C = indices_basicos["Passivo_C"]
+    Disponivel = indices_basicos["Disponivel"]
+    Imposto_de_renda_AC = indices_basicos["Imposto_de_renda_AC"]
+    Emprestimos = indices_basicos["Emprestimos"]
+    Provisoes = indices_basicos["Provisoes"]
+    Imposto_de_renda_PC = indices_basicos["Imposto_de_renda_PC"]
+    Dividendos = indices_basicos["Dividendos"]
 
-#PMRV
-pmrv = (clientes_medio / receita_24)*360
+    Ativo_CF = Disponivel + Imposto_de_renda_AC
+    Ativo_CO = Ativo_C - Ativo_CF
+    Passivo_CF = (Emprestimos + Provisoes + Imposto_de_renda_PC + Dividendos)
+    Passivo_CO = (Passivo_C - Passivo_CF)
+    #Capital de Giro
+    Capital_de_Giro = Ativo_C - Passivo_C
+    #Necessidade de Capital de Giro
+    Necessidade_de_CG = Ativo_CO - Passivo_CO
+    #Saldo Tesouraria
+    Saldo_Tesouraria = Ativo_CF - Passivo_CF
 
-#PMPF
-pmpf = (fornecedores_medio / compras)*360
+    return {
+        'Capital_de_Giro'   : Capital_de_Giro,
+        'Necessidade_de_CG' : Necessidade_de_CG,
+        'Saldo_Tesouraria'  : Saldo_Tesouraria,
+    }
 
-#Ciclo Operacional (CO)
-co = pme + pmrv 
+def indices_endividamento(indices_basicos):
+    Passivo_C = indices_basicos["Passivo_C"]
+    Passivo_NC = indices_basicos["Passivo_NC"]
+    Patrimonio_L = indices_basicos["Patrimonio_L"]
+    Ativo_T = indices_basicos["Ativo_T"]
 
-#Ciclo Financeiro (CF)
-cf = co - pmpf
+    CtCp = (Passivo_C + Passivo_NC) / Patrimonio_L
+    Endividamento_geral = (Passivo_C + Passivo_NC) / (Passivo_C + Passivo_NC + Patrimonio_L)
+    Solvencia = Ativo_T / (Passivo_C + Passivo_NC)
+    Composicao_E = Passivo_C / (Passivo_C + Passivo_NC)
 
-#Ciclo Ecônomico (CE) 
-ce = pme
+    return {
+        'CtCp'               : CtCp,
+        'Endividamento_geral': Endividamento_geral,
+        'Solvencia'          : Solvencia,
+        'Composicao_E'       : Composicao_E,
+    }
 
-#ACF
-caixa_EC = valor_contabil(df, '^1.*','^Caixa e Equivalentes de Caixa$') / 2
-operacoes_derivativos = valor_contabil(df, '^1.*','^Operações com Derivativos$') - 298888
-credito_partes_relacionadas = valor_contabil(df, '^1.*','^Créditos com Partes Relacionadas$')
+def indices_emprestimos(indices_basicos):
+    Passivo_C = indices_basicos["Passivo_C"]
+    Passivo_NC = indices_basicos["Passivo_NC"]
+    Disponivel = indices_basicos["Disponivel"]
+    Patrimonio_L = indices_basicos["Patrimonio_L"]
+    POn = indices_basicos["POn"]
 
-acf = caixa_EC + operacoes_derivativos + credito_partes_relacionadas
+    PFun = (Passivo_C+Passivo_NC)-POn
+    Divida_liquida = POn - Disponivel
+    Capital_Oneroso = Divida_liquida+Patrimonio_L
+    Indice_DLPL = Divida_liquida/Patrimonio_L
+    Indice_DLCO = Divida_liquida/Capital_Oneroso
+    
+    return {
+        'PFun'            : PFun,
+        'Indice_DLCO'     : Indice_DLCO,
+        'Indice_DLPL'     : Indice_DLPL,
+    }
 
-#PCF
-emprestimos_financiamentos = valor_contabil(df, '^2.01.04$','^Empréstimos e Financiamentos$') 
-ircsp = valor_contabil(df, '^2.*','^Imposto de Renda e Contribuição Social a Pagar$')
-debito_partes_relacionadas = valor_contabil(df, '^2.*','^Débitos com Outras Partes Relacionadas$')
-operacoes_derivativos2 = valor_contabil(df, '^2.01.05.02.05$','^Operaçoes com Derivativos$')
-dividendos_JCP_pagar = valor_contabil(df, '^2.*','^Dividendos e JCP a Pagar$')
-passivo_arrendamento_partesRelacionadas = valor_contabil(df, '^2.01.05.02.10$','^Passivo de arrendamento com partes relacionadas$')
+def indices_juros(indices_basicos):
+    POn = indices_basicos["POn"]
+    Patrimonio_L = indices_basicos["Patrimonio_L"]
+    Investimento = indices_basicos["Investimento"]
+    IR_Corrente = indices_basicos["IR_Corrente"]
+    Lair = indices_basicos["Lair"]
+    Despesa_Financeira = indices_basicos["Despesa_Financeira"]
 
-pcf = emprestimos_financiamentos + ircsp + debito_partes_relacionadas + operacoes_derivativos2 +dividendos_JCP_pagar + passivo_arrendamento_partesRelacionadas
+   #Custo médio ponderado de capital(CMPC)= Wi*Ki+We*Ke
+   #Wi(Peso dos fiananciamentos) e We(Peso do capital social)
+    Wi = POn / Investimento
+    We = Patrimonio_L / Investimento
+    Aliquota = IR_Corrente / Lair
+    Benefício_Tributário = Despesa_Financeira * Aliquota
+    DF_Liquida = Despesa_Financeira - Benefício_Tributário
+    #Ki(quanto que foi pago em relacao a divida total(em %))
+    Ki = DF_Liquida / POn
+    Ke = 0.17
+    Custo_MPC = (Wi * Ki) + (We * Ke)
 
-#ACO
-aco = ativo_circulante - acf 
+    return {
+        'Custo_MPC' : Custo_MPC
+    }
 
-#PCO
-pco = passivo_circulante - pcf 
+def indice_nao_realizavel(indices_basicos):
+    investimentos = indices_basicos["investimentos"]
+    imobilizado = indices_basicos["imobilizado"]
+    intangivel = indices_basicos["intangivel"]
+    Patrimonio_L = indices_basicos["Patrimonio_L"]
 
-#NCG
-ncg = aco - pco
+    Indice_PL = (investimentos + intangivel + imobilizado) / Patrimonio_L
 
-#ST
-st = acf - pcf
+    return {
+        'Indice_PL' : Indice_PL
+    }
 
-# EXCEL DE CONTABILIDADE
+def indices_ciclos(basicos_23, basicos_24):
+    Clientes_23 = basicos_23['Clientes']
+    Fornecedor_23 = basicos_23['Fornecedor']
+    Estoque_23 = basicos_23['Estoque']
+    Custo_MV_24 = basicos_24['Custo_MV']
+    Clientes_24 = basicos_24['Clientes']
+    Receita_liquida_24 = basicos_24['Receita_liquida']
+    Fornecedor_24 = basicos_24['Fornecedor']
+    Estoque_24 = basicos_24['Estoque']
+    
+    #PME
+    Estoque_med = (Estoque_23+Estoque_24)/2
+    PM_Estocagem = ((Estoque_med*360)/Custo_MV_24)*(-1)
+    #PMRV= (clientes med*360/Receita liquida))
+    Clientes_med = (Clientes_23+Clientes_24)/2
+    PM_Recebimento_V = (Clientes_med*360)/Receita_liquida_24
+    #PMPF(fornecedor med*360/(Compra = Estoque Final - Estoque Inicial +CMV))
+    Fornecedor_med = (Fornecedor_23+Fornecedor_24)/2
+    compra = Estoque_24 - Estoque_23 + Custo_MV_24
+    PM_Pagamento_F = ((Fornecedor_med*360)/compra)*(-1)
+    #CO
+    Ciclo_Operacional = PM_Estocagem + PM_Recebimento_V
+    #CF
+    Ciclo_Financeiro = Ciclo_Operacional - PM_Pagamento_F
+    #CE
+    Ciclo_Economico = PM_Estocagem
+    return {
+        'PM_Estocagem'     : PM_Estocagem,
+        'PM_Recebimento_V' : PM_Recebimento_V,
+        'PM_Pagamento_F'   : PM_Pagamento_F,
+        'Ciclo_Operacional': Ciclo_Operacional,
+        'Ciclo_Financeiro' : Ciclo_Financeiro,
+        'Ciclo_Economico'  : Ciclo_Economico
+    }
 
-excelcont = "C:\\Users\\202403765021\\Documents\\análisedados\\ambev trabalho excel.xlsx"
+def print_dict(name, ticker, trimestre, data):
+    print(f"{name} — {ticker} — {trimestre}")
+    for key, value in data.items():
+        print(f"  {key}: {value}")
+    print()
+
+def main():
+
+    list_ticker = []
+    list_ticker.append("ABEV3")
+    list_ticker.append("JBSS3")
+    list_ticker.append("MRFG3")
+    list_ticker.append("BRFS3")
+    list_ticker.append("BEEF3")
+    list_ticker.append("MDIA3")
+
+    list_tri = []
+    list_tri.append("20234T")
+    list_tri.append("20244T")
+    
+    list_df = []
+    list_liquidez = []
+    list_giro_tesouraria = []
+    list_endividamento = []
+    list_emprestimos = []
+    list_juros = []
+    list_nao_realizavel = []
+    list_ciclos = []
+
+    for ticker in list_ticker:
+        list_basicos = []
+        for trimestre in list_tri:
+            df = dataframe(ticker, trimestre)
+            list_df.append(df)
+
+            basicos = indices_basicos(df)
+            liquidas = indices_liquidez(basicos)
+            giro = indices_giro_tesouraria(basicos)
+            endividamento = indices_endividamento(basicos)
+            emprestimo = indices_emprestimos(basicos)
+            juros = indices_juros(basicos)
+            nao_realizavel = indice_nao_realizavel(basicos)
+
+            list_basicos.append(basicos)
+
+            list_liquidez.append(liquidas)
+            list_giro_tesouraria.append(giro)
+            list_endividamento.append(endividamento)
+            list_emprestimos.append(emprestimo)
+            list_juros.append(juros)
+            list_nao_realizavel.append(nao_realizavel)
+
+            print_dict("Índices Básicos",        ticker, trimestre, basicos)
+            print_dict("Índices de Liquidez",     ticker, trimestre, liquidas)
+            print_dict("Giro de Tesouraria",      ticker, trimestre, giro)
+            print_dict("Índice de Endividamento", ticker, trimestre, endividamento)
+            print_dict("Empréstimos",             ticker, trimestre, emprestimo)
+            print_dict("Índice de Juros",         ticker, trimestre, juros)
+            print_dict("Não Realizável",          ticker, trimestre, nao_realizavel)
+
+        
+        ciclos = indices_ciclos(list_basicos[0], list_basicos[1])
+        list_basicos.clear()
+
+        list_ciclos.append(ciclos)
+
+        # imprime ciclos
+        header = f"Ciclos — {ticker} — {list_tri[0]} & {list_tri[1]}"
+        print(header)
+        for key, value in ciclos.items():
+            print(f"  {key}: {value}")
+        print()
+
+main()

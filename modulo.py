@@ -1,9 +1,30 @@
 import requests
 import pandas as pd
+token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ5NzI5ODk4LCJpYXQiOjE3NDcxMzc4OTgsImp0aSI6IjI5Yjc0MTk5MDNmNzQ1MTc4MDQ0YjNmNTMxZGU2YjI0IiwidXNlcl9pZCI6NzV9.l7AwT2FatTBIfdnLoPBj8V_JdbFy2GL6vWF-Ww4nOlw"
+headers = {'Authorization': 'JWT {}'.format(token)}
 
-def dataframe(ticker, trimestre):
-    token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ2ODc3NTMyLCJpYXQiOjE3NDQyODU1MzIsImp0aSI6IjQ4MjdkYzRiN2YyNzQ2ZjU4YWYzZDY0MzBjYjIzMjM2IiwidXNlcl9pZCI6NTh9.RMxgWlV4QftrzCrM-8gXrfYgQwRlgFQ6IxLedgVpwAg"
-    headers = {'Authorization': 'JWT {}'.format(token)}
+
+def pegar_preco_corrigido(ticker, data_ini, data_fim):
+    params = {
+    'ticker': ticker,
+    'data_ini': data_ini,
+    'data_fim': data_fim
+    }
+    r = requests.get('https://laboratoriodefinancas.com/api/v1/preco-corrigido',params=params, headers=headers)
+    dados = r.json()['dados']
+    return pd.DataFrame(dados)
+
+def pegar_preco_diversos(ticker, data_ini, data_fim):
+    params = {
+    'ticker': ticker,
+    'data_ini': data_ini,
+    'data_fim': data_fim
+    }
+    r = requests.get('https://laboratoriodefinancas.com/api/v1/preco-diversos',params=params, headers=headers)
+    dados = r.json()['dados']
+    return pd.DataFrame(dados)
+
+def pegar_balanco(ticker, trimestre):
     empresa = f"{ticker}"
     data = f"{trimestre}"
     
@@ -19,9 +40,6 @@ def dataframe(ticker, trimestre):
     df = pd.DataFrame(balanco)
     return df
 
-ticker = 'ABEV3'
-trimestre = '20244T'
-df = dataframe(ticker, trimestre)
 
 #Ativo Circulante
 def valor_contabil(df, conta, descricao):
@@ -29,7 +47,6 @@ def valor_contabil(df, conta, descricao):
     filtro_descricao = df[ 'descricao']. str. contains (descricao, case=False)
     valor = sum(df[filtro_conta & filtro_descricao] ['valor'].values)
     return valor
-
 
 def valor_contabil_2(df, conta, descricao):
     filtro_conta = df[ 'conta'].str. contains (conta, case=False)
@@ -67,6 +84,10 @@ def indices_basicos(df):
     Clientes = valor_contabil(df,'^1.*','clientes')
     Receita_liquida = valor_contabil(df,'^3.*','receita')
     Fornecedor = valor_contabil(df,'^2.*','fornecedor')
+    Ebit = valor_contabil(df, '^3.0', 'Resultado Antes do Resultado')
+    Amortizacao = valor_contabil(df, '^6.0', 'Amortiza')
+    Lucro_Liquido = valor_contabil(df, '^3.', 'Consolidado')
+    Ke = 0.1725
     
     return {
         'Ativo_C'            : Ativo_C,
@@ -97,7 +118,11 @@ def indices_basicos(df):
         'Custo_MV'           : Custo_MV,
         'Clientes'           : Clientes,
         'Receita_liquida'    : Receita_liquida,
-        'Fornecedor'         : Fornecedor
+        'Fornecedor'         : Fornecedor,
+        'Ebit'               : Ebit,
+        'Amortizacao'        : Amortizacao,
+        'Lucro_Liquido'      : Lucro_Liquido,
+        'Ke'                 : Ke
     }
 
 def indices_liquidez(indices_basicos):
@@ -192,6 +217,7 @@ def indices_juros(indices_basicos):
     Patrimonio_L = indices_basicos["Patrimonio_L"]
     Investimento = indices_basicos["Investimento"]
     IR_Corrente = indices_basicos["IR_Corrente"]
+    Nopat = Investimento/IR_Corrente
     Lair = indices_basicos["Lair"]
     Despesa_Financeira = indices_basicos["Despesa_Financeira"]
 
@@ -208,7 +234,47 @@ def indices_juros(indices_basicos):
     Custo_MPC = (Wi * Ki) + (We * Ke)
 
     return {
-        'Custo_MPC' : Custo_MPC
+        'Custo_MPC' : Custo_MPC,
+    }
+
+def indice_valor_agregado(indices_basicos, indices_juros, indices_rentabilidade):
+    Custo_MPC = indices_juros['Custo_MPC']
+    Investimento = indices_basicos['Investimento']
+    Ebit = indices_basicos['Ebit']
+    Roe = indices_rentabilidade['Roe']
+    Ke = indices_basicos['Ke']
+
+    Eva = Ebit-(Investimento*Custo_MPC)
+    Spread = Roe-Ke
+    return {
+        'Eva'    : Eva,
+        'Spread' : Spread
+    }
+
+def indice_rentabilidade(indices_basicos):
+    Investimento = indices_basicos['Investimento']
+    Ebit = indices_basicos['Ebit']
+    Amortizacao = indices_basicos['Amortizacao']
+    IR_Corrente = indices_basicos['IR_Corrente']
+    Lucro_Liquido = indices_basicos['Lucro_Liquido']
+    Patrimonio_L = indices_basicos['Patrimonio_L']
+
+    #Lucros antes da amortizacao e depois do imposto de renda
+    Ebitda = Ebit + Amortizacao
+    Nopat = Ebit - IR_Corrente
+    #Retorno de Investimento(de financiamentos e capital social)
+    Roi = Nopat/Investimento
+    #Retorno do patrimonio(apenas capital social)
+    Roe = Lucro_Liquido/Patrimonio_L
+    #Grau de Alavancagem financeira
+    Gaf = Roe/Roi
+
+    return {
+        'Ebitda': Ebitda,
+        'Nopat' : Nopat,
+        'Roi'   : Roi,
+        'Roe'   : Roe,
+        'Gaf'   : Gaf
     }
 
 def indice_nao_realizavel(indices_basicos):
@@ -290,7 +356,7 @@ def main():
     for ticker in list_ticker:
         list_basicos = []
         for trimestre in list_tri:
-            df = dataframe(ticker, trimestre)
+            df = pegar_balanco(ticker, trimestre)
             list_df.append(df)
 
             basicos = indices_basicos(df)

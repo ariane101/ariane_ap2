@@ -5,7 +5,7 @@ def main():
     list_trimestre = ["20244T"]
     df_comparacao = pd.DataFrame()
     ticker_repetido = []
-    list_roi = []  
+    list_roe = []  
     list_eva = []  
     list_valor_agregado = []
 
@@ -18,19 +18,20 @@ def main():
             rentabilidade = indice_rentabilidade(basicos)
             valor_agregado = indice_valor_agregado(basicos, juros, rentabilidade)
 
-            roi = rentabilidade.get("Roi")  
+            roe = rentabilidade.get("Roe")  
             eva = valor_agregado.get("Eva") 
 
-            list_roi.append(roi)
+            list_roe.append(roe)
             list_eva.append(eva)
             list_valor_agregado.append(valor_agregado)
 
-    df_roi_eva = pd.DataFrame({
+    df_roe_eva = pd.DataFrame({
         "ticker": ticker_repetido,
-        "Roi": list_roi,
+        "Roe": list_roe,
         "Eva": list_eva
     })
 
-    print(df_roi_eva)
+    print(df_roe_eva)
     df_valor_agregado = pd.DataFrame(list_valor_agregado)
 main()
+

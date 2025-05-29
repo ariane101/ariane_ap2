@@ -1,45 +1,52 @@
 import requests
 import pandas as pd
-token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ5NzI5ODk4LCJpYXQiOjE3NDcxMzc4OTgsImp0aSI6IjI5Yjc0MTk5MDNmNzQ1MTc4MDQ0YjNmNTMxZGU2YjI0IiwidXNlcl9pZCI6NzV9.l7AwT2FatTBIfdnLoPBj8V_JdbFy2GL6vWF-Ww4nOlw"
+import matplotlib.pyplot as plt
+token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUxMTEwNDcyLCJpYXQiOjE3NDg1MTg0NTcsImp0aSI6IjY4NmVhZGU1Y2IyZTRmNTA5Yjg0OTg3OTI3NWFiYTY0IiwidXNlcl9pZCI6NzV9.kg06uYddVqlWmcn9lxNx5F8QWYnDQadOeQjN1La-kzo"
 headers = {'Authorization': 'JWT {}'.format(token)}
-
-
-def pegar_preco_corrigido(ticker, data_ini, data_fim):
-    params = {
-    'ticker': ticker,
-    'data_ini': data_ini,
-    'data_fim': data_fim
-    }
-    r = requests.get('https://laboratoriodefinancas.com/api/v1/preco-corrigido',params=params, headers=headers)
-    dados = r.json()['dados']
-    return pd.DataFrame(dados)
-
-def pegar_preco_diversos(ticker, data_ini, data_fim):
-    params = {
-    'ticker': ticker,
-    'data_ini': data_ini,
-    'data_fim': data_fim
-    }
-    r = requests.get('https://laboratoriodefinancas.com/api/v1/preco-diversos',params=params, headers=headers)
-    dados = r.json()['dados']
-    return pd.DataFrame(dados)
 
 def pegar_balanco(ticker, trimestre):
     empresa = f"{ticker}"
     data = f"{trimestre}"
-    
     params = {
-    'ticker': ticker,
-    'ano_tri': trimestre
+    'ticker': empresa,
+    'ano_tri': data
     }
     r = requests.get('https://laboratoriodefinancas.com/api/v1/balanco/',params=params, headers=headers)
-    r.json()
     r.json().keys()
     dados = r.json()['dados'][0]
     balanco = dados['balanco']
     df = pd.DataFrame(balanco)
     return df
 
+def preco_corrigido(ticker, dataini, datafim):
+    token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUxMTEwNDcyLCJpYXQiOjE3NDg1MTg0NTcsImp0aSI6IjY4NmVhZGU1Y2IyZTRmNTA5Yjg0OTg3OTI3NWFiYTY0IiwidXNlcl9pZCI6NzV9.kg06uYddVqlWmcn9lxNx5F8QWYnDQadOeQjN1La-kzo"
+    headers = {'Authorization': 'JWT {}'.format(token)}
+    empresa = f"{ticker}"
+    data_ini = f"{dataini}"
+    data_fim = f"{datafim}"
+    params = {
+    'ticker': empresa,
+    'data_ini': data_ini,
+    'data_fim': data_fim
+    }
+    if ticker=='ibov':
+        r = requests.get('https://laboratoriodefinancas.com/api/v1/preco-diversos',params=params, headers=headers)
+    else:
+        r = requests.get('https://laboratoriodefinancas.com/api/v1/preco-corrigido',params=params, headers=headers)
+    r.json().keys()
+    dados = r.json()['dados']
+    df = pd.DataFrame(dados)
+    return df
+
+def valor_acao(df):
+    preco_ini = df.iloc[0]['fechamento']
+    preco_fim = df.iloc[-1]['fechamento']
+    preco_acao = preco_fim/preco_ini
+    return {
+        'preco_ini' : preco_ini,
+        'preco_fim' : preco_fim,
+        'preco_acao': preco_acao
+    }
 
 #Ativo Circulante
 def valor_contabil(df, conta, descricao):
@@ -330,71 +337,63 @@ def print_dict(name, ticker, trimestre, data):
         print(f"  {key}: {value}")
     print()
 
-def main():
+def print_dict_2(name, ticker, dataini, datafim, valor_acao):
+    print(f"{name} — {ticker} — {dataini}/{datafim}")
+    for key, value in valor_acao.items():
+        print(f"  {key}: {value}")
+    print()
 
-    list_ticker = []
-    list_ticker.append("ABEV3")
-    list_ticker.append("JBSS3")
-    list_ticker.append("MRFG3")
-    list_ticker.append("BRFS3")
-    list_ticker.append("BEEF3")
-    list_ticker.append("MDIA3")
+import matplotlib.pyplot as plt
 
-    list_tri = []
-    list_tri.append("20234T")
-    list_tri.append("20244T")
-    
-    list_df = []
-    list_liquidez = []
-    list_giro_tesouraria = []
-    list_endividamento = []
-    list_emprestimos = []
-    list_juros = []
-    list_nao_realizavel = []
-    list_ciclos = []
 
-    for ticker in list_ticker:
-        list_basicos = []
-        for trimestre in list_tri:
-            df = pegar_balanco(ticker, trimestre)
-            list_df.append(df)
+import matplotlib.pyplot as plt
 
-            basicos = indices_basicos(df)
-            liquidas = indices_liquidez(basicos)
-            giro = indices_giro_tesouraria(basicos)
-            endividamento = indices_endividamento(basicos)
-            emprestimo = indices_emprestimos(basicos)
-            juros = indices_juros(basicos)
-            nao_realizavel = indice_nao_realizavel(basicos)
+# Parâmetros
+dataini = "2019-04-01"
+datafim = "2025-03-31"
+empresas = ["ABEV3", "JBSS3", "MRFG3", "BRFS3", "BEEF3", "MDIA3"]
+cores = ['blue', 'green', 'red', 'orange', 'purple', 'brown']
 
-            list_basicos.append(basicos)
+# Inicializa a figura e os eixos
+fig, ax1 = plt.subplots(figsize=(14, 7))
+ax2 = ax1.twinx()  # Eixo direito para IBOV
 
-            list_liquidez.append(liquidas)
-            list_giro_tesouraria.append(giro)
-            list_endividamento.append(endividamento)
-            list_emprestimos.append(emprestimo)
-            list_juros.append(juros)
-            list_nao_realizavel.append(nao_realizavel)
+# Plotando ações no eixo esquerdo
+for i, ticker in enumerate(empresas):
+    try:
+        df = preco_corrigido(ticker, dataini, datafim)
+        if df.empty or 'fechamento' not in df.columns:
+            print(f"Dados não disponíveis para {ticker}")
+            continue
+        df['retorno_normalizado'] = df['fechamento'] / df['fechamento'].iloc[0]
+        ax1.plot(df['data'], df['retorno_normalizado'], label=ticker, color=cores[i])
+    except Exception as e:
+        print(f"Erro com {ticker}: {e}")
 
-            print_dict("Índices Básicos",        ticker, trimestre, basicos)
-            print_dict("Índices de Liquidez",     ticker, trimestre, liquidas)
-            print_dict("Giro de Tesouraria",      ticker, trimestre, giro)
-            print_dict("Índice de Endividamento", ticker, trimestre, endividamento)
-            print_dict("Empréstimos",             ticker, trimestre, emprestimo)
-            print_dict("Índice de Juros",         ticker, trimestre, juros)
-            print_dict("Não Realizável",          ticker, trimestre, nao_realizavel)
+# Plotando IBOV no eixo direito
+try:
+    df_ibov = preco_corrigido('ibov', dataini, datafim)
+    if not df_ibov.empty and 'fechamento' in df_ibov.columns:
+        df_ibov['retorno_normalizado'] = df_ibov['fechamento'] / df_ibov['fechamento'].iloc[0]
+        ax2.plot(df_ibov['data'], df_ibov['retorno_normalizado'], label='IBOV', color='black', linestyle='--', linewidth=2)
+    else:
+        print("Não foi possível obter dados do IBOV.")
+except Exception as e:
+    print(f"Erro com IBOV: {e}")
 
-        
-        ciclos = indices_ciclos(list_basicos[0], list_basicos[1])
-        list_basicos.clear()
+# Configuração dos eixos
+ax1.set_xlabel('Data')
+ax1.set_ylabel('Retorno Normalizado (Ações)')
+ax2.set_ylabel('Retorno Normalizado (IBOV)')
 
-        list_ciclos.append(ciclos)
+# Legenda
+linhas1, labels1 = ax1.get_legend_handles_labels()
+linhas2, labels2 = ax2.get_legend_handles_labels()
+ax1.legend(linhas1 + linhas2, labels1 + labels2, loc='upper left')
 
-        # imprime ciclos
-        header = f"Ciclos — {ticker} — {list_tri[0]} & {list_tri[1]}"
-        print(header)
-        for key, value in ciclos.items():
-            print(f"  {key}: {value}")
-        print()
+# Estética final
+plt.title(f"Comparação de Retorno Normalizado — Ações vs IBOV ({dataini} a {datafim})")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
 
-main()
